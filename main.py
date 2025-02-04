@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+import xgboost as xgb 
 from sklearn.metrics import classification_report, accuracy_score
 
 # Load the credit card fraud detection dataset
@@ -42,6 +44,34 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
 # Evaluate the model
+print("\nLogistic Regression:")
 print("Accuracy:", accuracy_score(y_test, y_pred))
 print("Classification Report:")
 print(classification_report(y_test, y_pred))
+
+# Train Decision Tree model
+decision_tree_model = DecisionTreeClassifier(random_state=42)
+decision_tree_model.fit(X_train, y_train)
+
+# Make predictions using Decision Tree
+y_pred_tree = decision_tree_model.predict(X_test)
+
+# Evaluate the Decision Tree model
+print("\nDecision Tree:")
+print("Accuracy:", accuracy_score(y_test, y_pred_tree))
+print("Classification Report:")
+print(classification_report(y_test, y_pred_tree))
+
+
+# Train XGBoost model
+xgb_model = xgb.XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss')
+xgb_model.fit(X_train, y_train)
+
+# Make predictions using XGBoost
+y_pred_xgb = xgb_model.predict(X_test)
+
+# Evaluate the XGBoost model
+print("\nXGBoost:")
+print("Accuracy:", accuracy_score(y_test, y_pred_xgb))
+print("Classification Report:")
+print(classification_report(y_test, y_pred_xgb))
