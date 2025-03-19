@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-container, .results-container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .form-container h2, .results-container h2 {
+            margin-bottom: 15px;
+        }
+        .form-check {
+            margin-bottom: 10px;
+        }
+        .form-check input {
+            margin-right: 10px;
+        }
+        .form-check label {
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .plot-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        .visualizations {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .visualizations img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fraud Detection</h1>
+        <div class="form-container">
+            <h2>Select an Algorithm</h2>
+            <form action="/train" method="POST">
+                <div class="form-check">
+                    <input type="radio" name="algorithm" value="logistic_regression" id="logistic_regression" required>
+                    <label for="logistic_regression">Logistic Regression</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" name="algorithm" value="decision_tree" id="decision_tree">
+                    <label for="decision_tree">Decision Tree</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" name="algorithm" value="xgboost" id="xgboost">
+                    <label for="xgboost">XGBoost</label>
+                </div>
+                <button type="submit">Train and Evaluate</button>
+            </form>
+        </div>
+
+        {% if selected_result %}
+        <div class="results-container">
+            <h2>Results for {{ selected_result['algorithm'] }}</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Accuracy</td>
+                        <td>{{ selected_result['accuracy'] | round(2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Precision</td>
+                        <td>{{ selected_result['precision'] | round(2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Recall</td>
+                        <td>{{ selected_result['recall'] | round(2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>F1-Score</td>
+                        <td>{{ selected_result['f1_score'] | round(2) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="visualizations">
+                <div class="plot-container">
+                    <img src="data:image/png;base64,{{ selected_result['plot'] }}" alt="Metrics Plot">
+                </div>
+                <div class="plot-container">
+                    <img src="data:image/png;base64,{{ selected_result['confusion_matrix_plot'] }}" alt="Confusion Matrix">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="text-center">
+            <a href="/preprocessing" class="btn-secondary">View Data Preprocessing</a>
+            <a href="/comparison" class="btn-secondary">Go to Comparison Page</a>
+        </div>
+    </div>
+</body>
+</html>

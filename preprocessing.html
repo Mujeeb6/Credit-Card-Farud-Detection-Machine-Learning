@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Preprocessing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .data-container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .data-container h2 {
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Preprocessing</h1>
+
+        <!-- Dataset Info Section -->
+        <div class="data-container">
+            <h2>Dataset Info</h2>
+            <p><strong>Entries:</strong> {{ dataset_info.entries }}</p>
+            <p><strong>Columns:</strong> {{ dataset_info.columns }}</p>
+        </div>
+
+        <!-- Missing Values Section -->
+        <div class="data-container">
+            <h2>Missing Values</h2>
+            <p>{{ missing_values_check }}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Column</th>
+                        <th>Missing Values</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for column, count in missing_values.items() %}
+                    <tr>
+                        <td>{{ column }}</td>
+                        <td>{{ count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Duplicates Section -->
+        <!-- Duplicates Section -->
+<div class="data-container">
+    <h2>Duplicates</h2>
+    <p>{{ duplicates_check }}</p>
+    <p><strong>Duplicates Before Removal:</strong> {{ duplicates_count_before }}</p>
+    <p><strong>Duplicates After Removal:</strong> {{ duplicates_count_after }}</p>
+</div>
+        
+
+        <!-- Data Before Standard Scaler Section -->
+<div class="data-container">
+    <h2>Data Before Standard Scaler</h2>
+    <p><strong>Sample Data:</strong></p>
+    <table>
+        <thead>
+            <tr>
+                {% for column in X_before_scaler[0].keys() %}
+                <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in X_before_scaler %}
+            <tr>
+                {% for value in row.values() %}
+                <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Data After Standard Scaler Section -->
+<div class="data-container">
+    <h2>Data After Standard Scaler</h2>
+    <p><strong>Sample Data:</strong></p>
+    <table>
+        <thead>
+            <tr>
+                {% for column in X_after_scaler[0].keys() %}
+                <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in X_after_scaler %}
+            <tr>
+                {% for value in row.values() %}
+                <td>{{ value | round(4) }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+        <!-- Data Before SMOTE Section -->
+        <div class="data-container">
+            <h2>Data Before SMOTE</h2>
+            <p><strong>Class Distribution:</strong></p>
+            <ul>
+                <li>Legitimate: {{ class_dist_before_smote.legitimate }}</li>
+                <li>Fraudulent: {{ class_dist_before_smote.fraudulent }}</li>
+            </ul>
+        </div>
+
+        <!-- Data After SMOTE Section -->
+        <div class="data-container">
+            <h2>Data After SMOTE</h2>
+            <p><strong>Class Distribution:</strong></p>
+            <ul>
+                <li>Legitimate: {{ class_dist_after_smote.legitimate }}</li>
+                <li>Fraudulent: {{ class_dist_after_smote.fraudulent }}</li>
+            </ul>
+        </div>
+
+        <!-- Data Before Train-Test Split Section -->
+        <div class="data-container">
+            <h2>Data Before Train-Test Split</h2>
+            <p><strong>Total Samples:</strong> {{ data_before_split.total_samples }}</p>
+            <p><strong>Class Distribution:</strong></p>
+            <ul>
+                <li>Legitimate: {{ data_before_split.legitimate }}</li>
+                <li>Fraudulent: {{ data_before_split.fraudulent }}</li>
+            </ul>
+        </div>
+
+        <!-- Data After Train-Test Split Section -->
+        <div class="data-container">
+            <h2>Data After Train-Test Split</h2>
+            <p><strong>Training Samples:</strong> {{ data_after_split.train_samples }}</p>
+            <p><strong>Testing Samples:</strong> {{ data_after_split.test_samples }}</p>
+            <p><strong>Class Distribution (Training):</strong></p>
+            <ul>
+                <li>Legitimate: {{ data_after_split.train_legitimate }}</li>
+                <li>Fraudulent: {{ data_after_split.train_fraudulent }}</li>
+            </ul>
+            <p><strong>Class Distribution (Testing):</strong></p>
+            <ul>
+                <li>Legitimate: {{ data_after_split.test_legitimate }}</li>
+                <li>Fraudulent: {{ data_after_split.test_fraudulent }}</li>
+            </ul>
+        </div>
+
+        <div class="text-center">
+            <a href="/" class="btn-secondary">Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>
