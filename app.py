@@ -1,3 +1,4 @@
+import logging
 from flask import Flask, render_template, request, make_response
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -12,9 +13,17 @@ import io
 import base64
 import numpy as np
 
+# 1. Setup Production Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
 # Load the dataset
+logger.info("Initializing system: Loading and preprocessing dataset...")
 dataset = pd.read_csv('creditcard.csv')
 duplicates_count_before = dataset.duplicated().sum()
 
@@ -36,11 +45,13 @@ scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
 # Apply SMOTE to handle class imbalance
+logger.info("Applying SMOTE to handle class imbalance...")
 smote = SMOTE(random_state=42)
 X_resampled, y_resampled = smote.fit_resample(X_scaled, y)
 
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+logger.info("Data preprocessing complete. System ready for inference requests.")
 
 # Dictionary to store results
 results = {}
@@ -66,7 +77,6 @@ def plot_metrics(metrics):
     plt.ylim(0, 1)  # Metrics are between 0 and 1
     plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Save the plot to a buffer and return it as a base64 string
     return generate_plot()
 
 def plot_confusion_matrix(y_true, y_pred):
@@ -93,6 +103,7 @@ def index():
 @app.route('/train', methods=['POST'])
 def train():
     algorithm = request.form['algorithm']
+    logger.info(f"Incoming POST request to /train. Selected algorithm: {algorithm}")
     model = None
 
     if algorithm == 'logistic_regression':
@@ -106,128 +117,83 @@ def train():
         model_name = "XGBoost"
 
     if model:
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+        try:
+            logger.info(f"Starting model training for {model_name}...")
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+            logger.info(f"Training successful for {model_name}. Generating evaluation metrics.")
 
-        selected_metrics = {
-            'Accuracy': accuracy_score(y_test, y_pred),
-            'Precision': classification_report(y_test, y_pred, output_dict=True)['1']['precision'],
-            'Recall': classification_report(y_test, y_pred, output_dict=True)['1']['recall'],
-            'F1-Score': classification_report(y_test, y_pred, output_dict=True)['1']['f1-score']
-        }
+            selected_metrics = {
+                'Accuracy': accuracy_score(y_test, y_pred),
+                'Precision': classification_report(y_test, y_pred, output_dict=True)['1']['precision'],
+                'Recall': classification_report(y_test, y_pred, output_dict=True)['1']['recall'],
+                'F1-Score': classification_report(y_test, y_pred, output_dict=True)['1']['f1-score']
+            }
 
-        results[model_name] = {
-            'accuracy': selected_metrics['Accuracy'],
-            'classification_report': classification_report(y_test, y_pred, output_dict=True)
-        }
+            results[model_name] = {
+                'accuracy': selected_metrics['Accuracy'],
+                'classification_report': classification_report(y_test, y_pred, output_dict=True)
+            }
 
-        selected_result = {
-            'algorithm': model_name,
-            'accuracy': selected_metrics['Accuracy'],
-            'precision': selected_metrics['Precision'],
-            'recall': selected_metrics['Recall'],
-            'f1_score': selected_metrics['F1-Score'],
-            'plot': plot_metrics(selected_metrics),  # Use the new plot_metrics function
-            'confusion_matrix_plot': plot_confusion_matrix(y_test, y_pred),
-        }
+            selected_result = {
+                'algorithm': model_name,
+                'accuracy': selected_metrics['Accuracy'],
+                'precision': selected_metrics['Precision'],
+                'recall': selected_metrics['Recall'],
+                'f1_score': selected_metrics['F1-Score'],
+                'plot': plot_metrics(selected_metrics),
+                'confusion_matrix_plot': plot_confusion_matrix(y_test, y_pred),
+            }
 
-        return render_template('index.html', selected_result=selected_result, results=results)
+            return render_template('index.html', selected_result=selected_result, results=results)
+        
+        except Exception as e:
+            logger.error(f"Critical error during model training or evaluation: {str(e)}")
+            return "An internal server error occurred during model training.", 500
     else:
+        logger.warning(f"Failed request: Invalid algorithm selected ({algorithm})")
         return "Invalid algorithm selected", 400
 
 @app.route('/preprocessing')
 def preprocessing():
-    # Dataset Info
-    dataset_info = {
-        "entries": len(dataset),
-        "columns": len(dataset.columns)
-    }
-
-    # Missing Values
+    # ... (Your existing preprocessing route logic stays exactly the same) ...
+    dataset_info = {"entries": len(dataset), "columns": len(dataset.columns)}
     missing_values = dataset.isnull().sum().to_dict()
     missing_values_check = "No missing values found." if sum(missing_values.values()) == 0 else "Missing values found."
-
-    # Duplicates
-    duplicates_count_after = dataset.duplicated().sum()  # Duplicates after removal
+    duplicates_count_after = dataset.duplicated().sum()
     duplicates_check = f"{duplicates_count_before} duplicates found and removed." if duplicates_count_before > 0 else "No duplicates found."
-
-    # Data After Removing Duplicates
-    data_after_duplicates = {
-        "entries": len(dataset),
-        "columns": len(dataset.columns)
-    }
-
-    # Data Before Standard Scaler
+    data_after_duplicates = {"entries": len(dataset), "columns": len(dataset.columns)}
     X_before_scaler = dataset_combined.drop(columns=['Class'])
-
-    # Data After Standard Scaler
-    # Convert X_scaled (NumPy array) to a Pandas DataFrame
     X_after_scaler_df = pd.DataFrame(X_scaled, columns=X.columns)
-    # Convert the DataFrame to a list of dictionaries for Jinja2 rendering
     X_after_scaler = X_after_scaler_df.head(10).to_dict(orient='records')
-
-    # Data Before SMOTE
-    # Calculate class distribution before SMOTE
-    class_dist_before_smote = {
-        "legitimate": len(y[y == 0]),
-        "fraudulent": len(y[y == 1])
-    }
-
-    # Data After SMOTE
-    # Calculate class distribution after SMOTE
-    class_dist_after_smote = {
-        "legitimate": len(y_resampled[y_resampled == 0]),
-        "fraudulent": len(y_resampled[y_resampled == 1])
-    }
-
-    # Data Before Train-Test Split
-    data_before_split = {
-        "total_samples": len(X_resampled),
-        "legitimate": len(y_resampled[y_resampled == 0]),
-        "fraudulent": len(y_resampled[y_resampled == 1])
-    }
-
-    # Data After Train-Test Split
-    data_after_split = {
-        "train_samples": len(X_train),
-        "test_samples": len(X_test),
-        "train_legitimate": len(y_train[y_train == 0]),
-        "train_fraudulent": len(y_train[y_train == 1]),
-        "test_legitimate": len(y_test[y_test == 0]),
-        "test_fraudulent": len(y_test[y_test == 1])
-    }
+    class_dist_before_smote = {"legitimate": len(y[y == 0]), "fraudulent": len(y[y == 1])}
+    class_dist_after_smote = {"legitimate": len(y_resampled[y_resampled == 0]), "fraudulent": len(y_resampled[y_resampled == 1])}
+    data_before_split = {"total_samples": len(X_resampled), "legitimate": len(y_resampled[y_resampled == 0]), "fraudulent": len(y_resampled[y_resampled == 1])}
+    data_after_split = {"train_samples": len(X_train), "test_samples": len(X_test), "train_legitimate": len(y_train[y_train == 0]), "train_fraudulent": len(y_train[y_train == 1]), "test_legitimate": len(y_test[y_test == 0]), "test_fraudulent": len(y_test[y_test == 1])}
 
     return render_template(
         'preprocessing.html',
-        dataset_info=dataset_info,
-        missing_values=missing_values,
-        missing_values_check=missing_values_check,
-        duplicates_count_before=duplicates_count_before,  # Pass duplicates count before removal
-        duplicates_count_after=duplicates_count_after,  # Pass duplicates count after removal
-        duplicates_check=duplicates_check,
-        data_after_duplicates=data_after_duplicates,
-        X_before_scaler=X_before_scaler.head(10).to_dict(orient='records'),  # Pass as list of dictionaries
-        X_after_scaler=X_after_scaler,  # Pass as list of dictionaries
-        class_dist_before_smote=class_dist_before_smote,
-        class_dist_after_smote=class_dist_after_smote,
-        data_before_split=data_before_split,
-        data_after_split=data_after_split
+        dataset_info=dataset_info, missing_values=missing_values, missing_values_check=missing_values_check,
+        duplicates_count_before=duplicates_count_before, duplicates_count_after=duplicates_count_after,
+        duplicates_check=duplicates_check, data_after_duplicates=data_after_duplicates,
+        X_before_scaler=X_before_scaler.head(10).to_dict(orient='records'), X_after_scaler=X_after_scaler,
+        class_dist_before_smote=class_dist_before_smote, class_dist_after_smote=class_dist_after_smote,
+        data_before_split=data_before_split, data_after_split=data_after_split
     )
+
 @app.route('/comparison')
 def comparison():
-    # Ensure the results dictionary is populated
     if not results:
         return "No results available. Please train models first.", 400
 
-    # Generate a bar chart comparing all algorithms
     algorithms = list(results.keys())
     accuracy = [results[model]['accuracy'] for model in algorithms]
     precision = [results[model]['classification_report']['1']['precision'] for model in algorithms]
     recall = [results[model]['classification_report']['1']['recall'] for model in algorithms]
     f1_score = [results[model]['classification_report']['1']['f1-score'] for model in algorithms]
 
-    x = np.arange(len(algorithms))  # the label locations
-    width = 0.2  # the width of the bars
+    x = np.arange(len(algorithms))
+    width = 0.2
 
     plt.figure(figsize=(12, 6))
     plt.bar(x - 1.5 * width, accuracy, width, label='Accuracy')
@@ -240,10 +206,9 @@ def comparison():
     plt.title('Model Evaluation Metrics Comparison')
     plt.xticks(x, algorithms)
     plt.legend()
-    plt.ylim(0, 1)  # Metrics are between 0 and 1
+    plt.ylim(0, 1)
     plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Save the plot to a buffer and encode as base64
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
@@ -253,4 +218,6 @@ def comparison():
     return render_template('comparison.html', results=results, comparison_plot=comparison_plot)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Changed debug=True to False for production-like simulation
+    logger.info("Starting Flask application...")
+    app.run(debug=False, host='0.0.0.0')
